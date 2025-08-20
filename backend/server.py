@@ -221,7 +221,7 @@ async def download_file(file_id: str, current_user=Depends(get_current_user)):
             detail="File not found on disk"
         )
     
-    return FileResponse(
+    return FastAPIFileResponse(
         path=file_doc["path"],
         filename=file_doc["original_name"],
         media_type=file_doc["mime_type"]
