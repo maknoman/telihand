@@ -1,39 +1,57 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Progress } from './ui/progress';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Upload, File, Folder, Share2, Download, Trash2, Plus, Search } from 'lucide-react';
 import { Input } from './ui/input';
-import { getCurrentUser, isAuthenticated, mockLogout } from '../utils/mockAuth';
-import { mockFiles, mockStats } from '../utils/mockData';
+import { useAuth } from '../contexts/AuthContext';
+import { fileAPI, dashboardAPI, formatBytes } from '../services/api';
 import { useToast } from '../hooks/use-toast';
 
 const DashboardPage = () => {
-  const [user, setUser] = useState(null);
+  const { user, logout, updateUser } = useAuth();
   const [files, setFiles] = useState([]);
   const [stats, setStats] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const navigate = useNavigate();
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef(null);
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    if (!isAuthenticated()) {
-      navigate('/login');
-      return;
-    }
+    loadDashboardData();
+  }, []);
 
-    const currentUser = getCurrentUser();
-    setUser(currentUser);
-    
-    // Load mock data - will be replaced with API calls
-    setFiles(mockFiles);
-    setStats(mockStats);
-  }, [navigate]);
+  const loadDashboardData = async () => {
+    try {
+      const [filesResponse, statsResponse] = await Promise.all([
+        fileAPI.getFiles(),
+        dashboardAPI.getStats()
+      ]);
+      
+      setFiles(filesResponse.data);
+      setStats(statsResponse.data);
+      
+      // Update user storage from stats
+      if (user) {
+        updateUser({
+          ...user,
+          storage_used: statsResponse.data.storage_used
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load dashboard data",
+        variant: "destructive"
+      });
+    }
+  };
 
   const handleLogout = () => {
-    mockLogout();
+    logout();
     toast({
       title: "Logged out",
       description: "You have been successfully logged out."
@@ -42,25 +60,91 @@ const DashboardPage = () => {
   };
 
   const handleFileUpload = () => {
-    toast({
-      title: "Upload feature",
-      description: "File upload functionality will be implemented with backend."
-    });
+    fileInputRef.current?.click();
   };
 
-  const formatBytes = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  const handleFileSelect = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    setUploadProgress(0);
+
+    try {
+      await fileAPI.upload(file, (progressEvent) => {
+        const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+        setUploadProgress(progress);
+      });
+
+      toast({
+        title: "Upload successful",
+        description: `${file.name} has been uploaded successfully.`
+      });
+
+      // Reload dashboard data
+      await loadDashboardData();
+    } catch (error) {
+      const message = error.response?.data?.detail || 'Upload failed';
+      toast({
+        title: "Upload failed",
+        description: message,
+        variant: "destructive"
+      });
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(0);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
-  const storagePercentage = user ? (user.storageUsed / user.storageLimit) * 100 : 0;
+  const handleDeleteFile = async (fileId, fileName) => {
+    try {
+      await fileAPI.delete(fileId);
+      toast({
+        title: "File deleted",
+        description: `${fileName} has been deleted successfully.`
+      });
+      
+      // Reload dashboard data
+      await loadDashboardData();
+    } catch (error) {
+      toast({
+        title: "Delete failed",
+        description: "Failed to delete file",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDownloadFile = async (fileId, fileName) => {
+    try {
+      await fileAPI.download(fileId, fileName);
+    } catch (error) {
+      toast({
+        title: "Download failed",
+        description: "Failed to download file",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const storagePercentage = user ? (user.storage_used / user.storage_limit) * 100 : 0;
 
   const filteredFiles = files.filter(file =>
-    file.name.toLowerCase().includes(searchQuery.toLowerCase())
+    file.original_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const getFileIcon = (mimeType) => {
+    if (mimeType?.startsWith('image/')) return '🖼️';
+    if (mimeType?.startsWith('video/')) return '🎥';
+    if (mimeType?.startsWith('audio/')) return '🎵';
+    if (mimeType?.includes('pdf')) return '📄';
+    if (mimeType?.includes('text')) return '📝';
+    return '📁';
+  };
 
   if (!user) {
     return <div>Loading...</div>;
@@ -68,6 +152,14 @@ const DashboardPage = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      {/* Hidden file input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileSelect}
+        style={{ display: 'none' }}
+      />
+
       {/* Header */}
       <header className="bg-white shadow-sm border-b">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -88,6 +180,19 @@ const DashboardPage = () => {
       </header>
 
       <div className="max-w-7xl mx-auto p-6">
+        {/* Upload Progress */}
+        {isUploading && (
+          <Card className="mb-6 border-blue-200 bg-blue-50">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Uploading file...</span>
+                <span className="text-sm text-gray-600">{uploadProgress}%</span>
+              </div>
+              <Progress value={uploadProgress} className="h-2" />
+            </CardContent>
+          </Card>
+        )}
+
         {/* Storage Stats */}
         <Card className="mb-6">
           <CardHeader>
@@ -96,8 +201,8 @@ const DashboardPage = () => {
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between text-sm">
-                <span>Used: {formatBytes(user.storageUsed)}</span>
-                <span>Total: {formatBytes(user.storageLimit)}</span>
+                <span>Used: {formatBytes(user.storage_used)}</span>
+                <span>Total: {formatBytes(user.storage_limit)}</span>
               </div>
               <Progress value={storagePercentage} className="h-2" />
               <p className="text-xs text-gray-500">
@@ -157,7 +262,7 @@ const DashboardPage = () => {
                     className="pl-10 w-64"
                   />
                 </div>
-                <Button onClick={handleFileUpload}>
+                <Button onClick={handleFileUpload} disabled={isUploading}>
                   <Plus className="w-4 h-4 mr-2" />
                   Upload
                 </Button>
@@ -167,29 +272,51 @@ const DashboardPage = () => {
           
           <CardContent>
             <div className="space-y-2">
-              {filteredFiles.map((file) => (
-                <div key={file.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <File className="w-5 h-5 text-blue-600" />
-                    <div>
-                      <p className="font-medium">{file.name}</p>
-                      <p className="text-sm text-gray-500">{formatBytes(file.size)} • {file.modified}</p>
+              {filteredFiles.length === 0 ? (
+                <div className="text-center py-12">
+                  <File className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-500">
+                    {searchQuery ? 'No files match your search' : 'No files uploaded yet'}
+                  </p>
+                  <Button onClick={handleFileUpload} className="mt-4">
+                    Upload your first file
+                  </Button>
+                </div>
+              ) : (
+                filteredFiles.map((file) => (
+                  <div key={file.id} className="flex items-center justify-between p-3 hover:bg-gray-50 rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <span className="text-2xl">{getFileIcon(file.mime_type)}</span>
+                      <div>
+                        <p className="font-medium">{file.original_name}</p>
+                        <p className="text-sm text-gray-500">
+                          {formatBytes(file.size)} • {new Date(file.uploaded_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDownloadFile(file.id, file.original_name)}
+                      >
+                        <Download className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="sm">
+                        <Share2 className="w-4 h-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleDeleteFile(file.id, file.original_name)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                   </div>
-                  
-                  <div className="flex items-center space-x-2">
-                    <Button variant="ghost" size="sm">
-                      <Download className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <Share2 className="w-4 h-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </CardContent>
         </Card>

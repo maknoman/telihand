@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
 import { useToast } from '../hooks/use-toast';
-import { mockLogin } from '../utils/mockAuth';
+import { useAuth } from '../contexts/AuthContext';
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -14,6 +14,7 @@ const LoginPage = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
@@ -28,8 +29,7 @@ const LoginPage = () => {
     setIsLoading(true);
 
     try {
-      // Mock authentication - will be replaced with real API
-      const result = await mockLogin(formData.email, formData.password);
+      const result = await login(formData.email, formData.password);
       
       if (result.success) {
         toast({

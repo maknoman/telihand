@@ -5,7 +5,7 @@ import { Input } from './ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Label } from './ui/label';
 import { useToast } from '../hooks/use-toast';
-import { mockRegister } from '../utils/mockAuth';
+import { useAuth } from '../contexts/AuthContext';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -16,6 +16,7 @@ const RegisterPage = () => {
   });
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const { register } = useAuth();
   const navigate = useNavigate();
 
   const handleInputChange = (e) => {
@@ -40,8 +41,7 @@ const RegisterPage = () => {
     }
 
     try {
-      // Mock registration - will be replaced with real API
-      const result = await mockRegister({
+      const result = await register({
         name: formData.name,
         email: formData.email,
         password: formData.password
