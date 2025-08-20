@@ -1,26 +1,27 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from './ui/button';
 
 const Footer = () => {
   const productLinks = [
-    'Desktop app',
-    'Mobile app',
-    'Web app',
-    'Browser extension'
+    { name: 'Desktop app', path: '/get-app' },
+    { name: 'Mobile app', path: '/get-app' },
+    { name: 'Web app', path: '/dashboard' },
+    { name: 'Tera AI', path: '/tera-ai' }
   ];
 
   const companyLinks = [
-    'About us',
-    'Careers',
-    'Press',
-    'Contact us'
+    { name: 'About us', path: '/about' },
+    { name: 'Careers', path: '#' },
+    { name: 'Press', path: '#' },
+    { name: 'Contact us', path: '/contact' }
   ];
 
   const supportLinks = [
-    'Help Center',
-    'Community',
-    'Privacy Policy',
-    'Terms of Service'
+    { name: 'Help Center', path: '/help' },
+    { name: 'Community', path: '#' },
+    { name: 'Privacy Policy', path: '/privacy' },
+    { name: 'Terms of Service', path: '/terms' }
   ];
 
   return (
@@ -29,12 +30,12 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-8">
           {/* Logo and Description */}
           <div className="lg:col-span-2">
-            <div className="flex items-center space-x-2 mb-4">
+            <Link to="/" className="flex items-center space-x-2 mb-4">
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
                 <div className="w-4 h-4 bg-white rounded-sm"></div>
               </div>
               <span className="text-xl font-bold">TeraBox</span>
-            </div>
+            </Link>
             <p className="text-gray-400 mb-6 max-w-sm">
               The world's largest cloud storage platform offering 1024GB of free storage. 
               Secure, reliable, and easy to use.
@@ -64,9 +65,9 @@ const Footer = () => {
             <ul className="space-y-2">
               {productLinks.map((link, index) => (
                 <li key={index}>
-                  <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200">
-                    {link}
-                  </a>
+                  <Link to={link.path} className="text-gray-400 hover:text-white transition-colors duration-200">
+                    {link.name}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -78,9 +79,9 @@ const Footer = () => {
             <ul className="space-y-2">
               {companyLinks.map((link, index) => (
                 <li key={index}>
-                  <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200">
-                    {link}
-                  </a>
+                  <Link to={link.path} className="text-gray-400 hover:text-white transition-colors duration-200">
+                    {link.name}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -92,9 +93,9 @@ const Footer = () => {
             <ul className="space-y-2">
               {supportLinks.map((link, index) => (
                 <li key={index}>
-                  <a href="#" className="text-gray-400 hover:text-white transition-colors duration-200">
-                    {link}
-                  </a>
+                  <Link to={link.path} className="text-gray-400 hover:text-white transition-colors duration-200">
+                    {link.name}
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -107,15 +108,15 @@ const Footer = () => {
             © 2025 TeraBox. All rights reserved.
           </p>
           <div className="flex space-x-6 mt-4 md:mt-0">
-            <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors duration-200">
+            <Link to="/privacy" className="text-gray-400 hover:text-white text-sm transition-colors duration-200">
               Privacy Policy
-            </a>
-            <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors duration-200">
+            </Link>
+            <Link to="/terms" className="text-gray-400 hover:text-white text-sm transition-colors duration-200">
               Terms of Service
-            </a>
-            <a href="#" className="text-gray-400 hover:text-white text-sm transition-colors duration-200">
-              Cookie Policy
-            </a>
+            </Link>
+            <Link to="/contact" className="text-gray-400 hover:text-white text-sm transition-colors duration-200">
+              Contact
+            </Link>
           </div>
         </div>
       </div>

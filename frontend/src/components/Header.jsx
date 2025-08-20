@@ -6,12 +6,12 @@ import { Globe } from 'lucide-react';
 const Header = () => {
   const navItems = [
     { name: 'Get App', path: '/get-app' },
-    { name: 'Tera AI', path: '#' },
-    { name: 'Product', path: '#' }, 
+    { name: 'Tera AI', path: '/tera-ai' },
+    { name: 'Product', path: '/product' }, 
     { name: 'Pricing', path: '/pricing' },
-    { name: 'Referral program', path: '#' },
-    { name: 'Help Center', path: '#' },
-    { name: 'Blog', path: '#' },
+    { name: 'Referral program', path: '/referral' },
+    { name: 'Help Center', path: '/help' },
+    { name: 'Blog', path: '/blog' },
     { name: 'Integrations', path: '#' }
   ];
 
